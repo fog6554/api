@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stripe Payment</title>
+    <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body>
+<h2>Stripe Payment</h2>
+<form id="payment-form">
+    <div>
+        <label for="card-element">Credit or debit card</label>
+        <div id="card-element">
+            <!-- Stripe's Element will be inserted here -->
+        </div>
+    </div>
+    <button type="submit">Submit Payment</button>
+    <div id="card-errors" role="alert"></div>
+</form>
+
+<script>
+    // Initialize Stripe with your public key
+    const stripe = Stripe('pk_test_51OPrrJJk6SoY8iObTOwdKRVJemIpA82OY1GsACUiDGj900620otekdmZwmvxfqdtmAHit6D9lO00SuABwjpviWhV00aWOifRJ5');
+    const elements = stripe.elements();
+
+    // Create an instance of the card Element
+    const card = elements.create('card');
+    card.mount('#card-element');
+
+    // Handle form submission
+    const form = document.getElementById('payment-form');
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        const { token, error } = await stripe.createToken(card);
+
+        if (error) {
+            // Display error to the user
+            const errorElement = document.getElementById('card-errors');
+            errorElement.textContent = error.message;
+        } else {
+            // Send the token to your server for payment processing
+            processPayment(token.id);
+        }
+    });
+
+    async function processPayment(token) {
+        const response = await fetch('/process-payment', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                amount: 5000, // Amount in cents (5000 cents = 50 USD)
+                currency: 'usd',
+                token: token,
+            }),
+        });
+
+        const data = await response.json();
+        if (data.status === 'succeeded') {
+            alert('Payment successful!');
+        } else {
+            alert('Payment failed: ' + data.error);
+        }
+    }
+</script>
+</body>
+</html>
